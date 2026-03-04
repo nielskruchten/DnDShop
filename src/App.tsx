@@ -7,6 +7,7 @@ import ShopConfigPanel from './components/ShopConfig';
 import ShopDisplay from './components/ShopDisplay';
 import SavedShops from './components/SavedShops';
 import ExportModal from './components/ExportModal';
+import ItemDetailModal from './components/ItemDetailModal';
 
 const DEFAULT_DISTRIBUTION: RarityDistribution = {
   Common: 40,
@@ -36,6 +37,7 @@ export default function App() {
   const [showExport, setShowExport] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
 
   // Load item data on mount
   useEffect(() => {
@@ -179,6 +181,7 @@ export default function App() {
               onSave={handleSave}
               onExport={() => setShowExport(true)}
               onRegenerateAll={handleGenerate}
+              onViewDetail={setSelectedItem}
             />
           ) : (
             <EmptyState
@@ -205,6 +208,13 @@ export default function App() {
           items={shopItems}
           config={config}
           onClose={() => setShowExport(false)}
+        />
+      )}
+      {selectedItem && (
+        <ItemDetailModal
+          shopItem={selectedItem}
+          showPrice={config.showPrices}
+          onClose={() => setSelectedItem(null)}
         />
       )}
     </div>

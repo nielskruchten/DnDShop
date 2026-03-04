@@ -15,6 +15,8 @@ export type ItemSource =
 
 export type ShopPreset = 'village' | 'town' | 'city' | 'arcane' | 'custom';
 
+export type ShopTheme = 'general' | 'combat' | 'temple' | 'arcane' | 'stealth' | 'curio';
+
 export interface RarityDistribution {
   Common: number;
   Uncommon: number;
@@ -30,6 +32,7 @@ export interface MagicItem {
   type: string;
   attunement: boolean;
   source: ItemSource;
+  description?: string;
 }
 
 export interface ShopItem {

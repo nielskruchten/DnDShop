@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ShopConfig, ShopPreset, ItemSource, RarityDistribution } from '../types';
 
 const ALL_SOURCES: { id: ItemSource; label: string }[] = [
@@ -44,6 +45,23 @@ const PRESETS: Record<ShopPreset, {
   },
 };
 
+interface ThemeDef {
+  id: string;
+  label: string;
+  emoji: string;
+  description: string;
+  itemTypes: string[];
+}
+
+const THEMES: ThemeDef[] = [
+  { id: 'general',  label: 'General',        emoji: '🏪', description: 'All item types',              itemTypes: [] },
+  { id: 'combat',   label: 'War Camp',        emoji: '⚔️', description: 'Weapons & armor',             itemTypes: ['Weapon', 'Armor'] },
+  { id: 'temple',   label: 'Temple',          emoji: '⛪', description: 'Potions, scrolls & relics',   itemTypes: ['Potion', 'Scroll', 'Wondrous Item'] },
+  { id: 'arcane',   label: 'Arcane Supplier', emoji: '🔮', description: 'Staves, wands & scrolls',     itemTypes: ['Staff', 'Wand', 'Rod', 'Scroll', 'Wondrous Item'] },
+  { id: 'stealth',  label: 'Thieves Guild',   emoji: '🗡️', description: 'Utility & subtlety items',    itemTypes: ['Potion', 'Ring', 'Wondrous Item'] },
+  { id: 'curio',    label: 'Curio Shop',      emoji: '🪄', description: 'Oddities & curiosities',      itemTypes: ['Ring', 'Wondrous Item', 'Rod'] },
+];
+
 const RARITY_KEYS: (keyof RarityDistribution)[] = [
   'Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary',
 ];
@@ -56,6 +74,21 @@ const RARITY_COLORS: Record<string, string> = {
   Legendary:   'text-orange-400',
 };
 
+/** Detect which theme matches the current itemTypes, if any. */
+function detectTheme(itemTypes: string[]): string {
+  const sorted = [...itemTypes].sort().join(',');
+  const match = THEMES.find(t => [...t.itemTypes].sort().join(',') === sorted);
+  return match?.id ?? '';
+}
+
+/** Map party level (1–20) to a shop preset. */
+function levelToPreset(level: number): ShopPreset {
+  if (level <= 4)  return 'village';
+  if (level <= 10) return 'town';
+  if (level <= 16) return 'city';
+  return 'arcane';
+}
+
 interface ShopConfigProps {
   config: ShopConfig;
   onChange: (config: ShopConfig) => void;
@@ -64,6 +97,8 @@ interface ShopConfigProps {
 }
 
 export default function ShopConfigPanel({ config, onChange, onGenerate, itemCount }: ShopConfigProps) {
+  const [partyLevel, setPartyLevel] = useState(5);
+
   const update = (partial: Partial<ShopConfig>) => onChange({ ...config, ...partial });
 
   const handlePreset = (preset: ShopPreset) => {
@@ -90,6 +125,16 @@ export default function ShopConfigPanel({ config, onChange, onGenerate, itemCoun
     update({ itemTypes });
   };
 
+  const handleTheme = (theme: ThemeDef) => {
+    update({ itemTypes: [...theme.itemTypes] });
+  };
+
+  const handleSuggestTier = () => {
+    const preset = levelToPreset(partyLevel);
+    update({ preset, rarityDistribution: { ...PRESETS[preset].distribution } });
+  };
+
+  const activeThemeId = detectTheme(config.itemTypes);
   const totalWeight = RARITY_KEYS.reduce((s, k) => s + config.rarityDistribution[k], 0);
 
   const canGenerate =
@@ -99,6 +144,35 @@ export default function ShopConfigPanel({ config, onChange, onGenerate, itemCoun
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
+
+        {/* Party Level */}
+        <section>
+          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+            Party Level
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={1}
+              max={20}
+              value={partyLevel}
+              onChange={e => setPartyLevel(Number(e.target.value))}
+              className="flex-1 accent-amber-500"
+            />
+            <span className="w-6 text-center font-semibold text-zinc-200 text-sm">
+              {partyLevel}
+            </span>
+          </div>
+          <button
+            onClick={handleSuggestTier}
+            className="mt-2 w-full py-1.5 rounded-lg border border-zinc-700 bg-zinc-800/50 text-zinc-300 text-xs hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
+          >
+            Suggest tier for level {partyLevel} →{' '}
+            <span className="text-amber-400 font-medium">
+              {PRESETS[levelToPreset(partyLevel)].label}
+            </span>
+          </button>
+        </section>
 
         {/* Item count */}
         <section>
@@ -178,6 +252,33 @@ export default function ShopConfigPanel({ config, onChange, onGenerate, itemCoun
             </div>
           </section>
         )}
+
+        {/* Shop Theme */}
+        <section>
+          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+            Shop Theme
+          </label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {THEMES.map(theme => (
+              <button
+                key={theme.id}
+                onClick={() => handleTheme(theme)}
+                title={theme.description}
+                className={`
+                  text-left px-2.5 py-2 rounded-lg border text-xs transition-colors
+                  ${activeThemeId === theme.id
+                    ? 'border-gold-500 bg-gold-500/10 text-gold-300'
+                    : 'border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800'
+                  }
+                `}
+              >
+                <span className="mr-1.5">{theme.emoji}</span>
+                <span className="font-medium">{theme.label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-600 mt-1.5">Sets item type filter for the shop.</p>
+        </section>
 
         {/* Sources */}
         <section>

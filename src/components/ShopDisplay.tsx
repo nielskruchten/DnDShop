@@ -1,5 +1,16 @@
+import { useState } from 'react';
 import { ShopItem, ShopConfig } from '../types';
 import ItemCard from './ItemCard';
+
+const FILTER_RARITIES = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary'];
+
+const RARITY_PILL: Record<string, { label: string; active: string; inactive: string }> = {
+  Common:      { label: 'C',  active: 'bg-zinc-600 text-zinc-100 border-zinc-500',         inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
+  Uncommon:    { label: 'U',  active: 'bg-green-900/70 text-green-300 border-green-700/60', inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
+  Rare:        { label: 'R',  active: 'bg-blue-900/70 text-blue-300 border-blue-700/60',    inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
+  'Very Rare': { label: 'VR', active: 'bg-purple-900/70 text-purple-300 border-purple-700/60', inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
+  Legendary:   { label: 'L',  active: 'bg-orange-900/70 text-orange-300 border-orange-700/60', inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
+};
 
 interface ShopDisplayProps {
   shopName: string;
@@ -11,6 +22,7 @@ interface ShopDisplayProps {
   onSave: () => void;
   onExport: () => void;
   onRegenerateAll: () => void;
+  onViewDetail: (item: ShopItem) => void;
 }
 
 export default function ShopDisplay({
@@ -23,7 +35,38 @@ export default function ShopDisplay({
   onSave,
   onExport,
   onRegenerateAll,
+  onViewDetail,
 }: ShopDisplayProps) {
+  const [search, setSearch] = useState('');
+  const [visibleRarities, setVisibleRarities] = useState<Set<string>>(
+    new Set(FILTER_RARITIES),
+  );
+
+  const allSelected = FILTER_RARITIES.every(r => visibleRarities.has(r));
+
+  const toggleRarity = (rarity: string) => {
+    setVisibleRarities(prev => {
+      const next = new Set(prev);
+      if (next.has(rarity)) next.delete(rarity);
+      else next.add(rarity);
+      return next;
+    });
+  };
+
+  const resetFilters = () => {
+    setSearch('');
+    setVisibleRarities(new Set(FILTER_RARITIES));
+  };
+
+  const filtered = items.filter(si => {
+    const matchesSearch =
+      search === '' || si.item.name.toLowerCase().includes(search.toLowerCase());
+    const matchesRarity = allSelected || visibleRarities.has(si.item.rarity);
+    return matchesSearch && matchesRarity;
+  });
+
+  const isFiltered = search !== '' || !allSelected;
+
   return (
     <div className="flex flex-col h-full">
       {/* Shop header */}
@@ -59,9 +102,68 @@ export default function ShopDisplay({
         </div>
       </div>
 
+      {/* Filter bar */}
+      <div className="no-print px-4 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 border-b border-zinc-800/60 flex-shrink-0">
+        {/* Search input */}
+        <div className="relative flex-1 min-w-0">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">⌕</span>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search items…"
+            className="w-full bg-zinc-800/60 border border-zinc-700/60 rounded-lg pl-7 pr-3 py-1.5 text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 text-xs"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Rarity pills */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {FILTER_RARITIES.map(rarity => {
+            const pill = RARITY_PILL[rarity];
+            const isActive = visibleRarities.has(rarity);
+            return (
+              <button
+                key={rarity}
+                onClick={() => toggleRarity(rarity)}
+                title={rarity}
+                className={`
+                  h-7 min-w-[28px] px-2 rounded-md border text-xs font-semibold transition-colors
+                  ${isActive ? pill.active : pill.inactive}
+                `}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+          {isFiltered && (
+            <button
+              onClick={resetFilters}
+              className="h-7 px-2 rounded-md text-xs text-zinc-500 hover:text-zinc-300 transition-colors ml-0.5"
+              title="Clear filters"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Stats bar */}
-      <div className="no-print px-4 py-2 flex items-center gap-4 text-xs text-zinc-500 border-b border-zinc-800/60 flex-shrink-0">
-        <span>{items.length} items</span>
+      <div className="no-print px-4 py-1.5 flex items-center gap-3 text-xs text-zinc-500 flex-shrink-0">
+        {isFiltered ? (
+          <span className="text-amber-400/70">
+            Showing {filtered.length} of {items.length}
+          </span>
+        ) : (
+          <span>{items.length} items</span>
+        )}
         <span>·</span>
         <span>{items.filter(i => i.locked).length} locked</span>
         {config.showPrices && (
@@ -109,17 +211,34 @@ export default function ShopDisplay({
         </div>
 
         {/* Screen grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 print:hidden">
-          {items.map((si, idx) => (
-            <ItemCard
-              key={si.key}
-              shopItem={si}
-              showPrice={config.showPrices}
-              onLock={() => onLockItem(idx)}
-              onRegenerate={() => onRegenerateItem(idx)}
-            />
-          ))}
-        </div>
+        {filtered.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 print:hidden">
+            {filtered.map((si, _) => {
+              const realIdx = items.indexOf(si);
+              return (
+                <ItemCard
+                  key={si.key}
+                  shopItem={si}
+                  showPrice={config.showPrices}
+                  onLock={() => onLockItem(realIdx)}
+                  onRegenerate={() => onRegenerateItem(realIdx)}
+                  onViewDetail={() => onViewDetail(si)}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center print:hidden">
+            <p className="text-3xl mb-3">🔍</p>
+            <p className="text-zinc-400 text-sm">No items match your filters.</p>
+            <button
+              onClick={resetFilters}
+              className="mt-3 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              Reset filters
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

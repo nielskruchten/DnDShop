@@ -21,20 +21,35 @@ function parseMarkdown(content, filename, source) {
   let rarity = '';
   let type = '';
   let attunement = false;
+  let lastMetaLine = 0;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
     if (trimmed.startsWith('# ') && !name) {
       name = trimmed.slice(2).trim();
     } else if (trimmed.includes('**Rarity:**')) {
       rarity = trimmed.split('**Rarity:**')[1].trim();
+      lastMetaLine = i;
     } else if (trimmed.includes('**Type:**')) {
       type = trimmed.split('**Type:**')[1].trim();
+      lastMetaLine = i;
     } else if (trimmed.includes('**Attunement:**')) {
       const val = trimmed.split('**Attunement:**')[1].trim().toLowerCase();
       attunement = val.startsWith('yes');
+      lastMetaLine = i;
+    } else if (trimmed.includes('**Source:**')) {
+      lastMetaLine = i;
     }
   }
+
+  // Everything after the last metadata line is the description.
+  // Split into paragraphs, strip empty lines.
+  const rawDesc = lines.slice(lastMetaLine + 1).join('\n');
+  const description = rawDesc
+    .split(/\n{2,}/)
+    .map(p => p.trim())
+    .filter(p => p.length > 0 && !p.startsWith('#'))
+    .join('\n\n');
 
   if (!name || !rarity || !type) return null;
 
@@ -45,6 +60,7 @@ function parseMarkdown(content, filename, source) {
     type,
     attunement,
     source,
+    description,
   };
 }
 

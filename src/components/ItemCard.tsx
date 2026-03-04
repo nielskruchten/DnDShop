@@ -16,32 +16,34 @@ interface ItemCardProps {
   showPrice: boolean;
   onLock: () => void;
   onRegenerate: () => void;
+  onViewDetail: () => void;
 }
 
-export default function ItemCard({ shopItem, showPrice, onLock, onRegenerate }: ItemCardProps) {
+export default function ItemCard({ shopItem, showPrice, onLock, onRegenerate, onViewDetail }: ItemCardProps) {
   const { item, quantity, price, locked } = shopItem;
   const style = RARITY_STYLES[item.rarity] ?? RARITY_STYLES.Common;
 
   return (
     <div
+      onClick={onViewDetail}
       className={`
         relative flex flex-col bg-zinc-900 border rounded-xl p-4 gap-2 transition-all
-        animate-fade-in
+        animate-fade-in cursor-pointer group
         ${locked
-          ? 'border-gold-500/60 shadow-[0_0_0_1px_rgba(201,168,76,0.3)]'
-          : 'border-zinc-800 hover:border-zinc-600'
+          ? 'border-gold-500/60 shadow-[0_0_0_1px_rgba(201,168,76,0.3)] hover:border-gold-400/80'
+          : 'border-zinc-800 hover:border-zinc-500'
         }
       `}
     >
       {/* Name row */}
       <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-zinc-100 leading-snug text-sm sm:text-base">
+        <h3 className="font-semibold text-zinc-100 leading-snug text-sm sm:text-base group-hover:text-white transition-colors">
           {item.name}
         </h3>
 
         {/* Lock button */}
         <button
-          onClick={onLock}
+          onClick={e => { e.stopPropagation(); onLock(); }}
           title={locked ? 'Unlock item' : 'Lock item (keeps on regenerate)'}
           className={`
             flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-base
@@ -65,6 +67,9 @@ export default function ItemCard({ shopItem, showPrice, onLock, onRegenerate }: 
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.badge}`}>
           {item.rarity}
         </span>
+        {item.attunement && (
+          <span className="text-xs text-amber-400/70 ml-1">attunement</span>
+        )}
       </div>
 
       {/* Footer: qty + price + regen */}
@@ -78,22 +83,29 @@ export default function ItemCard({ shopItem, showPrice, onLock, onRegenerate }: 
           )}
         </div>
 
-        {/* Regenerate button */}
-        <button
-          onClick={onRegenerate}
-          disabled={locked}
-          title={locked ? 'Unlock to regenerate' : 'Roll a new item'}
-          className={`
-            w-7 h-7 flex items-center justify-center rounded-md text-base
-            transition-colors
-            ${locked
-              ? 'text-zinc-700 cursor-not-allowed'
-              : 'text-zinc-500 hover:text-amber-400 active:scale-90'
-            }
-          `}
-        >
-          ↺
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Details hint */}
+          <span className="text-[10px] text-zinc-600 group-hover:text-zinc-500 transition-colors mr-1 hidden sm:inline">
+            details
+          </span>
+
+          {/* Regenerate button */}
+          <button
+            onClick={e => { e.stopPropagation(); onRegenerate(); }}
+            disabled={locked}
+            title={locked ? 'Unlock to regenerate' : 'Roll a new item'}
+            className={`
+              w-7 h-7 flex items-center justify-center rounded-md text-base
+              transition-colors
+              ${locked
+                ? 'text-zinc-700 cursor-not-allowed'
+                : 'text-zinc-500 hover:text-amber-400 active:scale-90'
+              }
+            `}
+          >
+            ↺
+          </button>
+        </div>
       </div>
 
       {/* Source label */}
