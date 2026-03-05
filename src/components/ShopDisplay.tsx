@@ -182,7 +182,7 @@ export default function ShopDisplay({
               {shopkeeper.name}
             </span>
             <span className="text-zinc-700 flex-shrink-0">·</span>
-            <span className="text-xs text-zinc-500 capitalize flex-shrink-0">{shopkeeper.gender}</span>
+            <span className="text-xs text-zinc-500 capitalize flex-shrink-0 w-10">{shopkeeper.gender}</span>
             <span className="text-zinc-700 flex-shrink-0">·</span>
             <select
               value={config.shopkeeperRace}
