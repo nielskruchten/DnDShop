@@ -14,6 +14,38 @@ const SOURCE_MAP = {
   'vault_of_magic': 'Vault of Magic',
 };
 
+/**
+ * Some source files concatenate the table header row onto the last sentence
+ * of a paragraph with no newline, e.g.:
+ *   "...when 1 hour has passed. | d3 | Use fortune for |\n| --- | --- |\n..."
+ * This function inserts a newline before such inline table headers so the table
+ * header becomes its own line and can be parsed correctly.
+ */
+function normalizeTableHeaders(text) {
+  const lines = text.split('\n');
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const nextTrimmed = (lines[i + 1] ?? '').trim();
+    // Match: line doesn't start with |, ends with table-row content (| ... |),
+    // and the very next line is a markdown table separator (| --- | --- |).
+    if (
+      !line.trimStart().startsWith('|') &&
+      /\|[^|]*\|\s*$/.test(line) &&
+      /^\|[\s:|-]+\|/.test(nextTrimmed)
+    ) {
+      const match = line.match(/^(.*?)\s+(\|(?:[^|\n]+\|)+\s*)$/);
+      if (match && match[1].trim()) {
+        out.push(match[1].trimEnd());   // text portion
+        out.push(match[2].trim());      // table header portion
+        continue;
+      }
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+}
+
 function parseMarkdown(content, filename, source) {
   const lines = content.split('\n');
 
@@ -43,8 +75,8 @@ function parseMarkdown(content, filename, source) {
   }
 
   // Everything after the last metadata line is the description.
-  // Split into paragraphs, strip empty lines.
-  const rawDesc = lines.slice(lastMetaLine + 1).join('\n');
+  // Normalize inline table headers first, then split into paragraphs.
+  const rawDesc = normalizeTableHeaders(lines.slice(lastMetaLine + 1).join('\n'));
   const description = rawDesc
     .split(/\n{2,}/)
     .map(p => p.trim())
