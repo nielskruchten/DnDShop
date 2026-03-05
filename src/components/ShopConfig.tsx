@@ -54,7 +54,7 @@ interface ThemeDef {
 }
 
 const THEMES: ThemeDef[] = [
-  { id: 'general',  label: 'General',        emoji: '🏪', description: 'All item types',              itemTypes: [] },
+  { id: 'general',  label: 'General',        emoji: '🏪', description: 'All item types',              itemTypes: ALL_TYPES },
   { id: 'combat',   label: 'War Camp',        emoji: '⚔️', description: 'Weapons & armor',             itemTypes: ['Weapon', 'Armor'] },
   { id: 'temple',   label: 'Temple',          emoji: '⛪', description: 'Potions, scrolls & relics',   itemTypes: ['Potion', 'Scroll', 'Wondrous Item'] },
   { id: 'arcane',   label: 'Arcane Supplier', emoji: '🔮', description: 'Staves, wands & scrolls',     itemTypes: ['Staff', 'Wand', 'Rod', 'Scroll', 'Wondrous Item'] },
@@ -139,7 +139,7 @@ export default function ShopConfigPanel({ config, onChange, onGenerate, itemCoun
 
   const canGenerate =
     config.sources.length > 0 &&
-    (config.itemTypes.length > 0 || ALL_TYPES.length > 0);
+    config.itemTypes.length > 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -310,13 +310,13 @@ export default function ShopConfigPanel({ config, onChange, onGenerate, itemCoun
             </label>
             <div className="flex gap-2">
               <button
-                onClick={() => update({ itemTypes: [] })}
+                onClick={() => update({ itemTypes: [...ALL_TYPES] })}
                 className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
               >
                 All
               </button>
               <button
-                onClick={() => update({ itemTypes: [...ALL_TYPES] })}
+                onClick={() => update({ itemTypes: [] })}
                 className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
               >
                 None
@@ -325,7 +325,7 @@ export default function ShopConfigPanel({ config, onChange, onGenerate, itemCoun
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             {ALL_TYPES.map(type => {
-              const active = config.itemTypes.length === 0 || config.itemTypes.includes(type);
+              const active = config.itemTypes.includes(type);
               return (
                 <label key={type} className="flex items-center gap-2 cursor-pointer group">
                   <input
@@ -341,9 +341,6 @@ export default function ShopConfigPanel({ config, onChange, onGenerate, itemCoun
               );
             })}
           </div>
-          <p className="text-xs text-zinc-600 mt-1.5">
-            When all deselected, all types are included.
-          </p>
         </section>
 
         {/* Prices */}

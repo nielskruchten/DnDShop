@@ -57,7 +57,7 @@ function buildPool(
   return allItems.filter(
     item =>
       config.sources.includes(item.source) &&
-      (config.itemTypes.length === 0 || config.itemTypes.includes(item.type)) &&
+      config.itemTypes.includes(item.type) &&
       GENERATABLE_RARITIES.includes(item.rarity) &&
       !excludeIds.has(item.id),
   );

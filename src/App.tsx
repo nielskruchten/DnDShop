@@ -17,12 +17,17 @@ const DEFAULT_DISTRIBUTION: RarityDistribution = {
   Legendary: 1,
 };
 
+const ALL_ITEM_TYPES = [
+  'Wondrous Item', 'Weapon', 'Armor', 'Ring',
+  'Staff', 'Wand', 'Rod', 'Potion', 'Scroll',
+];
+
 const DEFAULT_CONFIG: ShopConfig = {
   preset: 'town' as ShopPreset,
   itemCount: 12,
   rarityDistribution: DEFAULT_DISTRIBUTION,
   sources: ['5e 2014 SRD', '5e 2024 SRD', 'Level Up A5E', 'Vault of Magic'],
-  itemTypes: [],
+  itemTypes: [...ALL_ITEM_TYPES],
   showPrices: true,
   priceMarkup: 1.0,
 };
@@ -120,7 +125,12 @@ export default function App() {
   }, [shopItems, shopName, config]);
 
   const handleLoadShop = useCallback((shop: SavedShop) => {
-    setConfig(shop.config);
+    // Migrate shops saved before the itemTypes semantic change:
+    // old []  meant "all types"; new [] means "none selected".
+    const config = shop.config.itemTypes.length === 0
+      ? { ...shop.config, itemTypes: [...ALL_ITEM_TYPES] }
+      : shop.config;
+    setConfig(config);
     setShopItems(shop.items);
     setShopName(shop.name);
   }, []);
