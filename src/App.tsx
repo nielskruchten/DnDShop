@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShopConfig, ShopItem, SavedShop, MagicItem, ShopPreset, RarityDistribution, Shopkeeper } from './types';
+import { ShopConfig, ShopItem, SavedShop, MagicItem, ShopPreset, RarityDistribution, Shopkeeper, ShopkeeperRace } from './types';
 import { generateShop, generateSingleItem } from './lib/generator';
 import { generateShopkeeper } from './lib/npcGenerator';
 import { loadSavedShops, persistShop, removeShop, generateId } from './lib/storage';
@@ -93,6 +93,11 @@ export default function App() {
   const handleRerollShopkeeper = useCallback(() => {
     setShopkeeper(generateShopkeeper(config.shopkeeperRace));
   }, [config.shopkeeperRace]);
+
+  const handleSelectRace = useCallback((race: ShopkeeperRace | 'random') => {
+    setConfig(prev => ({ ...prev, shopkeeperRace: race }));
+    setShopkeeper(generateShopkeeper(race));
+  }, []);
 
   const handleLockItem = useCallback((index: number) => {
     setShopItems(prev =>
@@ -211,6 +216,7 @@ export default function App() {
               onRegenerateAll={handleGenerate}
               onViewDetail={setSelectedItem}
               onRerollShopkeeper={handleRerollShopkeeper}
+              onSelectRace={handleSelectRace}
             />
           ) : (
             <EmptyState

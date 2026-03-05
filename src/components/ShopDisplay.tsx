@@ -1,6 +1,13 @@
 import { useState } from 'react';
-import { ShopItem, ShopConfig, Shopkeeper } from '../types';
+import { ShopItem, ShopConfig, Shopkeeper, ShopkeeperRace } from '../types';
 import ItemCard from './ItemCard';
+
+const RACE_OPTIONS: { id: ShopkeeperRace | 'random'; label: string }[] = [
+  { id: 'random', label: 'Any'   },
+  { id: 'human',  label: 'Human' },
+  { id: 'dwarf',  label: 'Dwarf' },
+  { id: 'elf',    label: 'Elf'   },
+];
 
 const FILTER_RARITIES = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary'];
 
@@ -12,11 +19,6 @@ const RARITY_PILL: Record<string, { label: string; active: string; inactive: str
   Legendary:   { label: 'L',  active: 'bg-orange-900/70 text-orange-300 border-orange-700/60', inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
 };
 
-const RACE_LABEL: Record<string, string> = {
-  human: 'Human',
-  dwarf: 'Dwarf',
-  elf:   'Elf',
-};
 
 interface ShopDisplayProps {
   shopName: string;
@@ -31,6 +33,7 @@ interface ShopDisplayProps {
   onRegenerateAll: () => void;
   onViewDetail: (item: ShopItem) => void;
   onRerollShopkeeper: () => void;
+  onSelectRace: (race: ShopkeeperRace | 'random') => void;
 }
 
 export default function ShopDisplay({
@@ -46,6 +49,7 @@ export default function ShopDisplay({
   onRegenerateAll,
   onViewDetail,
   onRerollShopkeeper,
+  onSelectRace,
 }: ShopDisplayProps) {
   const [search, setSearch] = useState('');
   const [visibleRarities, setVisibleRarities] = useState<Set<string>>(
@@ -116,16 +120,36 @@ export default function ShopDisplay({
 
         {/* Row 2: shopkeeper */}
         {shopkeeper && (
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-x-2 gap-y-1 mt-0.5 flex-wrap">
             <span className="text-sm text-zinc-300 font-medium">{shopkeeper.name}</span>
             <span className="text-zinc-700">·</span>
-            <span className="text-xs text-zinc-500 capitalize">{RACE_LABEL[shopkeeper.race]}</span>
-            <span className="text-zinc-700">·</span>
             <span className="text-xs text-zinc-500 capitalize">{shopkeeper.gender}</span>
+            <span className="text-zinc-700">·</span>
+
+            {/* Inline race selector */}
+            <div className="flex items-center gap-1">
+              {RACE_OPTIONS.map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => onSelectRace(opt.id)}
+                  title={`Set race to ${opt.label} and reroll name`}
+                  className={`
+                    px-1.5 py-0.5 rounded text-xs font-medium border transition-colors
+                    ${config.shopkeeperRace === opt.id
+                      ? 'border-gold-500/50 bg-gold-500/10 text-gold-400'
+                      : 'border-zinc-700 text-zinc-600 hover:border-zinc-600 hover:text-zinc-400'
+                    }
+                  `}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             <button
               onClick={onRerollShopkeeper}
               title="Reroll shopkeeper name"
-              className="ml-1 w-6 h-6 flex items-center justify-center rounded-md text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 transition-colors text-sm"
+              className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 transition-colors text-sm"
             >
               🎲
             </button>
