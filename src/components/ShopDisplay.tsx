@@ -174,38 +174,31 @@ export default function ShopDisplay({
           </div>
         </div>
 
-        {/* Row 2: shopkeeper — name left (truncates), controls pinned right */}
+        {/* Row 2: shopkeeper — all inline, name truncates, controls stay adjacent */}
         {shopkeeper && (
           <div className="flex items-center gap-x-2 mt-0.5 min-w-0">
-            {/* Name: takes remaining space, truncates rather than wrapping */}
-            <span className="text-sm text-zinc-300 font-medium truncate min-w-0 flex-1">
+            <span className="text-sm text-zinc-300 font-medium truncate min-w-0 shrink">
               {shopkeeper.name}
             </span>
-
-            {/* Controls: always the same width, never move */}
-            <div className="flex items-center gap-x-2 flex-shrink-0">
-              <span className="text-zinc-700">·</span>
-              <span className="text-xs text-zinc-500 capitalize">{shopkeeper.gender}</span>
-              <span className="text-zinc-700">·</span>
-
-              <select
-                value={config.shopkeeperRace}
-                onChange={e => onSelectRace(e.target.value as ShopkeeperRace)}
-                className="bg-zinc-800 border border-zinc-700 rounded text-xs text-zinc-300 px-1.5 py-0.5 focus:outline-none focus:border-zinc-500 hover:border-zinc-600 transition-colors cursor-pointer"
-              >
-                {SHOPKEEPER_RACES.map(race => (
-                  <option key={race} value={race}>{RACE_LABELS[race]}</option>
-                ))}
-              </select>
-
-              <button
-                onClick={onRerollShopkeeper}
-                title="Reroll shopkeeper name"
-                className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 transition-colors text-sm"
-              >
-                🎲
-              </button>
-            </div>
+            <span className="text-zinc-700 flex-shrink-0">·</span>
+            <span className="text-xs text-zinc-500 capitalize flex-shrink-0">{shopkeeper.gender}</span>
+            <span className="text-zinc-700 flex-shrink-0">·</span>
+            <select
+              value={config.shopkeeperRace}
+              onChange={e => onSelectRace(e.target.value as ShopkeeperRace)}
+              className="flex-shrink-0 bg-zinc-800 border border-zinc-700 rounded text-xs text-zinc-300 px-1.5 py-0.5 focus:outline-none focus:border-zinc-500 hover:border-zinc-600 transition-colors cursor-pointer"
+            >
+              {SHOPKEEPER_RACES.map(race => (
+                <option key={race} value={race}>{RACE_LABELS[race]}</option>
+              ))}
+            </select>
+            <button
+              onClick={onRerollShopkeeper}
+              title="Reroll shopkeeper name"
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 transition-colors text-sm"
+            >
+              🎲
+            </button>
           </div>
         )}
       </div>
