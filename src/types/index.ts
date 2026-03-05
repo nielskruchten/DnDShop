@@ -17,6 +17,15 @@ export type ShopPreset = 'village' | 'town' | 'city' | 'arcane' | 'custom';
 
 export type ShopTheme = 'general' | 'combat' | 'temple' | 'arcane' | 'stealth' | 'curio';
 
+export type ShopkeeperRace = 'human' | 'dwarf' | 'elf';
+export type ShopkeeperGender = 'male' | 'female';
+
+export interface Shopkeeper {
+  name: string;               // "FirstName FamilyName"
+  race: ShopkeeperRace;
+  gender: ShopkeeperGender;
+}
+
 export interface RarityDistribution {
   Common: number;
   Uncommon: number;
@@ -51,6 +60,7 @@ export interface ShopConfig {
   itemTypes: string[];
   showPrices: boolean;
   priceMarkup: number;
+  shopkeeperRace: ShopkeeperRace | 'random';
 }
 
 export interface SavedShop {
@@ -58,5 +68,6 @@ export interface SavedShop {
   name: string;
   config: ShopConfig;
   items: ShopItem[];
+  shopkeeper?: Shopkeeper;
   savedAt: string;
 }

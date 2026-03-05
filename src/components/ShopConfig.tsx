@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShopConfig, ShopPreset, ItemSource, RarityDistribution } from '../types';
+import { ShopConfig, ShopPreset, ItemSource, RarityDistribution, ShopkeeperRace } from '../types';
 
 const ALL_SOURCES: { id: ItemSource; label: string }[] = [
   { id: '5e 2014 SRD',   label: 'D&D 2014 SRD' },
@@ -278,6 +278,35 @@ export default function ShopConfigPanel({ config, onChange, onGenerate, itemCoun
             ))}
           </div>
           <p className="text-xs text-zinc-600 mt-1.5">Sets item type filter for the shop.</p>
+        </section>
+
+        {/* Shopkeeper Race */}
+        <section>
+          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+            Shopkeeper Race
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { id: 'random', label: 'Random' },
+              { id: 'human',  label: 'Human'  },
+              { id: 'dwarf',  label: 'Dwarf'  },
+              { id: 'elf',    label: 'Elf'    },
+            ] as { id: ShopkeeperRace | 'random'; label: string }[]).map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => update({ shopkeeperRace: opt.id })}
+                className={`
+                  px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors
+                  ${config.shopkeeperRace === opt.id
+                    ? 'border-gold-500 bg-gold-500/10 text-gold-300'
+                    : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
+                  }
+                `}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* Sources */}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShopConfig, ShopItem, SavedShop, MagicItem, ShopPreset, RarityDistribution } from './types';
+import { ShopConfig, ShopItem, SavedShop, MagicItem, ShopPreset, RarityDistribution, Shopkeeper } from './types';
 import { generateShop, generateSingleItem } from './lib/generator';
+import { generateShopkeeper } from './lib/npcGenerator';
 import { loadSavedShops, persistShop, removeShop, generateId } from './lib/storage';
 import Header from './components/Header';
 import ShopConfigPanel from './components/ShopConfig';
@@ -30,6 +31,7 @@ const DEFAULT_CONFIG: ShopConfig = {
   itemTypes: [...ALL_ITEM_TYPES],
   showPrices: true,
   priceMarkup: 1.0,
+  shopkeeperRace: 'random',
 };
 
 export default function App() {
@@ -37,6 +39,7 @@ export default function App() {
   const [config, setConfig] = useState<ShopConfig>(DEFAULT_CONFIG);
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [shopName, setShopName] = useState('');
+  const [shopkeeper, setShopkeeper] = useState<Shopkeeper | null>(null);
   const [savedShops, setSavedShops] = useState<SavedShop[]>([]);
   const [showSaved, setShowSaved] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -79,9 +82,17 @@ export default function App() {
       }
     }
     setShopItems(result);
+
+    // Generate a new shopkeeper alongside the shop
+    setShopkeeper(generateShopkeeper(config.shopkeeperRace));
+
     // Close config panel on mobile after generating
     setShowConfig(false);
   }, [allItems, config, shopItems]);
+
+  const handleRerollShopkeeper = useCallback(() => {
+    setShopkeeper(generateShopkeeper(config.shopkeeperRace));
+  }, [config.shopkeeperRace]);
 
   const handleLockItem = useCallback((index: number) => {
     setShopItems(prev =>
@@ -118,21 +129,27 @@ export default function App() {
       name,
       config,
       items: shopItems,
+      shopkeeper: shopkeeper ?? undefined,
       savedAt: new Date().toISOString(),
     };
     persistShop(shop);
     setSavedShops(loadSavedShops());
-  }, [shopItems, shopName, config]);
+  }, [shopItems, shopName, config, shopkeeper]);
 
   const handleLoadShop = useCallback((shop: SavedShop) => {
     // Migrate shops saved before the itemTypes semantic change:
-    // old []  meant "all types"; new [] means "none selected".
-    const config = shop.config.itemTypes.length === 0
+    // old [] meant "all types"; new [] means "none selected".
+    const loadedConfig = shop.config.itemTypes.length === 0
       ? { ...shop.config, itemTypes: [...ALL_ITEM_TYPES] }
       : shop.config;
-    setConfig(config);
+    // Migrate shops saved before shopkeeperRace was added
+    if (!loadedConfig.shopkeeperRace) {
+      loadedConfig.shopkeeperRace = 'random';
+    }
+    setConfig(loadedConfig);
     setShopItems(shop.items);
     setShopName(shop.name);
+    setShopkeeper(shop.shopkeeper ?? null);
   }, []);
 
   const handleDeleteShop = useCallback((id: string) => {
@@ -185,6 +202,7 @@ export default function App() {
               shopName={shopName}
               items={shopItems}
               config={config}
+              shopkeeper={shopkeeper}
               onShopNameChange={setShopName}
               onLockItem={handleLockItem}
               onRegenerateItem={handleRegenerateItem}
@@ -192,6 +210,7 @@ export default function App() {
               onExport={() => setShowExport(true)}
               onRegenerateAll={handleGenerate}
               onViewDetail={setSelectedItem}
+              onRerollShopkeeper={handleRerollShopkeeper}
             />
           ) : (
             <EmptyState

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShopItem, ShopConfig } from '../types';
+import { ShopItem, ShopConfig, Shopkeeper } from '../types';
 import ItemCard from './ItemCard';
 
 const FILTER_RARITIES = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary'];
@@ -12,10 +12,17 @@ const RARITY_PILL: Record<string, { label: string; active: string; inactive: str
   Legendary:   { label: 'L',  active: 'bg-orange-900/70 text-orange-300 border-orange-700/60', inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
 };
 
+const RACE_LABEL: Record<string, string> = {
+  human: 'Human',
+  dwarf: 'Dwarf',
+  elf:   'Elf',
+};
+
 interface ShopDisplayProps {
   shopName: string;
   items: ShopItem[];
   config: ShopConfig;
+  shopkeeper: Shopkeeper | null;
   onShopNameChange: (name: string) => void;
   onLockItem: (index: number) => void;
   onRegenerateItem: (index: number) => void;
@@ -23,12 +30,14 @@ interface ShopDisplayProps {
   onExport: () => void;
   onRegenerateAll: () => void;
   onViewDetail: (item: ShopItem) => void;
+  onRerollShopkeeper: () => void;
 }
 
 export default function ShopDisplay({
   shopName,
   items,
   config,
+  shopkeeper,
   onShopNameChange,
   onLockItem,
   onRegenerateItem,
@@ -36,6 +45,7 @@ export default function ShopDisplay({
   onExport,
   onRegenerateAll,
   onViewDetail,
+  onRerollShopkeeper,
 }: ShopDisplayProps) {
   const [search, setSearch] = useState('');
   const [visibleRarities, setVisibleRarities] = useState<Set<string>>(
@@ -70,16 +80,18 @@ export default function ShopDisplay({
   return (
     <div className="flex flex-col h-full">
       {/* Shop header */}
-      <div className="no-print flex flex-col sm:flex-row sm:items-center gap-3 p-4 pb-3 border-b border-zinc-800 flex-shrink-0">
-        <input
-          type="text"
-          value={shopName}
-          onChange={e => onShopNameChange(e.target.value)}
-          placeholder="Shop name…"
-          className="flex-1 bg-transparent border-b border-zinc-700 focus:border-gold-500 outline-none text-xl font-display text-zinc-100 placeholder-zinc-600 pb-0.5 transition-colors"
-        />
+      <div className="no-print flex flex-col gap-1 p-4 pb-3 border-b border-zinc-800 flex-shrink-0">
+        {/* Row 1: name + action buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <input
+            type="text"
+            value={shopName}
+            onChange={e => onShopNameChange(e.target.value)}
+            placeholder="Shop name…"
+            className="flex-1 bg-transparent border-b border-zinc-700 focus:border-gold-500 outline-none text-xl font-display text-zinc-100 placeholder-zinc-600 pb-0.5 transition-colors"
+          />
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={onRegenerateAll}
             title="Regenerate all unlocked items"
@@ -99,7 +111,26 @@ export default function ShopDisplay({
           >
             Export
           </button>
+          </div>
         </div>
+
+        {/* Row 2: shopkeeper */}
+        {shopkeeper && (
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-sm text-zinc-300 font-medium">{shopkeeper.name}</span>
+            <span className="text-zinc-700">·</span>
+            <span className="text-xs text-zinc-500 capitalize">{RACE_LABEL[shopkeeper.race]}</span>
+            <span className="text-zinc-700">·</span>
+            <span className="text-xs text-zinc-500 capitalize">{shopkeeper.gender}</span>
+            <button
+              onClick={onRerollShopkeeper}
+              title="Reroll shopkeeper name"
+              className="ml-1 w-6 h-6 flex items-center justify-center rounded-md text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 transition-colors text-sm"
+            >
+              🎲
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filter bar */}
