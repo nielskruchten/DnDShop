@@ -174,32 +174,38 @@ export default function ShopDisplay({
           </div>
         </div>
 
-        {/* Row 2: shopkeeper */}
+        {/* Row 2: shopkeeper — name left (truncates), controls pinned right */}
         {shopkeeper && (
-          <div className="flex items-center gap-x-2 gap-y-1 mt-0.5 flex-wrap">
-            <span className="text-sm text-zinc-300 font-medium">{shopkeeper.name}</span>
-            <span className="text-zinc-700">·</span>
-            <span className="text-xs text-zinc-500 capitalize">{shopkeeper.gender}</span>
-            <span className="text-zinc-700">·</span>
+          <div className="flex items-center gap-x-2 mt-0.5 min-w-0">
+            {/* Name: takes remaining space, truncates rather than wrapping */}
+            <span className="text-sm text-zinc-300 font-medium truncate min-w-0 flex-1">
+              {shopkeeper.name}
+            </span>
 
-            {/* Race dropdown */}
-            <select
-              value={config.shopkeeperRace}
-              onChange={e => onSelectRace(e.target.value as ShopkeeperRace)}
-              className="bg-zinc-800 border border-zinc-700 rounded text-xs text-zinc-300 px-1.5 py-0.5 focus:outline-none focus:border-zinc-500 hover:border-zinc-600 transition-colors cursor-pointer"
-            >
-              {SHOPKEEPER_RACES.map(race => (
-                <option key={race} value={race}>{RACE_LABELS[race]}</option>
-              ))}
-            </select>
+            {/* Controls: always the same width, never move */}
+            <div className="flex items-center gap-x-2 flex-shrink-0">
+              <span className="text-zinc-700">·</span>
+              <span className="text-xs text-zinc-500 capitalize">{shopkeeper.gender}</span>
+              <span className="text-zinc-700">·</span>
 
-            <button
-              onClick={onRerollShopkeeper}
-              title="Reroll shopkeeper name"
-              className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 transition-colors text-sm"
-            >
-              🎲
-            </button>
+              <select
+                value={config.shopkeeperRace}
+                onChange={e => onSelectRace(e.target.value as ShopkeeperRace)}
+                className="bg-zinc-800 border border-zinc-700 rounded text-xs text-zinc-300 px-1.5 py-0.5 focus:outline-none focus:border-zinc-500 hover:border-zinc-600 transition-colors cursor-pointer"
+              >
+                {SHOPKEEPER_RACES.map(race => (
+                  <option key={race} value={race}>{RACE_LABELS[race]}</option>
+                ))}
+              </select>
+
+              <button
+                onClick={onRerollShopkeeper}
+                title="Reroll shopkeeper name"
+                className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 transition-colors text-sm"
+              >
+                🎲
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -245,15 +251,19 @@ export default function ShopDisplay({
               </button>
             );
           })}
-          {isFiltered && (
-            <button
-              onClick={resetFilters}
-              className="h-7 px-2 rounded-md text-xs text-zinc-500 hover:text-zinc-300 transition-colors ml-0.5"
-              title="Clear filters"
-            >
-              Reset
-            </button>
-          )}
+          {/* Always rendered so the pills don't shift when it appears/disappears */}
+          <button
+            onClick={resetFilters}
+            className={`h-7 px-2 rounded-md text-xs transition-colors ml-0.5 ${
+              isFiltered
+                ? 'text-zinc-500 hover:text-zinc-300'
+                : 'invisible pointer-events-none'
+            }`}
+            tabIndex={isFiltered ? 0 : -1}
+            title="Clear filters"
+          >
+            Reset
+          </button>
         </div>
       </div>
 
@@ -282,15 +292,19 @@ export default function ShopDisplay({
           <SortButton field="rarity" label="Rarity" />
           <SortButton field="type"   label="Type"   />
           {config.showPrices && <SortButton field="price" label="Price" />}
-          {sortField && (
-            <button
-              onClick={() => { setSortField(null); setSortDir('asc'); }}
-              className="ml-1 text-zinc-600 hover:text-zinc-400 text-xs transition-colors"
-              title="Clear sort"
-            >
-              ✕
-            </button>
-          )}
+          {/* Always rendered so sort buttons don't shift */}
+          <button
+            onClick={() => { setSortField(null); setSortDir('asc'); }}
+            className={`ml-1 text-xs transition-colors ${
+              sortField
+                ? 'text-zinc-600 hover:text-zinc-400'
+                : 'invisible pointer-events-none'
+            }`}
+            tabIndex={sortField ? 0 : -1}
+            title="Clear sort"
+          >
+            ✕
+          </button>
         </div>
       </div>
 
