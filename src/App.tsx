@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ShopConfig, ShopItem, SavedShop, MagicItem, ShopPreset, RarityDistribution, Shopkeeper, ShopkeeperRace } from './types';
 import { generateShop, generateSingleItem } from './lib/generator';
-import { generateShopkeeper } from './lib/npcGenerator';
+import { generateShopkeeper, pickRandomRace } from './lib/npcGenerator';
 import { loadSavedShops, persistShop, removeShop, generateId } from './lib/storage';
 import Header from './components/Header';
 import ShopConfigPanel from './components/ShopConfig';
@@ -31,7 +31,7 @@ const DEFAULT_CONFIG: ShopConfig = {
   itemTypes: [...ALL_ITEM_TYPES],
   showPrices: true,
   priceMarkup: 1.0,
-  shopkeeperRace: 'random',
+  shopkeeperRace: 'human',
 };
 
 export default function App() {
@@ -83,8 +83,10 @@ export default function App() {
     }
     setShopItems(result);
 
-    // Generate a new shopkeeper alongside the shop
-    setShopkeeper(generateShopkeeper(config.shopkeeperRace));
+    // Generate a new shopkeeper alongside the shop (pick a random race)
+    const race = pickRandomRace();
+    setConfig(prev => ({ ...prev, shopkeeperRace: race }));
+    setShopkeeper(generateShopkeeper(race));
 
     // Close config panel on mobile after generating
     setShowConfig(false);
@@ -94,7 +96,7 @@ export default function App() {
     setShopkeeper(generateShopkeeper(config.shopkeeperRace));
   }, [config.shopkeeperRace]);
 
-  const handleSelectRace = useCallback((race: ShopkeeperRace | 'random') => {
+  const handleSelectRace = useCallback((race: ShopkeeperRace) => {
     setConfig(prev => ({ ...prev, shopkeeperRace: race }));
     setShopkeeper(generateShopkeeper(race));
   }, []);
@@ -147,9 +149,9 @@ export default function App() {
     const loadedConfig = shop.config.itemTypes.length === 0
       ? { ...shop.config, itemTypes: [...ALL_ITEM_TYPES] }
       : shop.config;
-    // Migrate shops saved before shopkeeperRace was added
-    if (!loadedConfig.shopkeeperRace) {
-      loadedConfig.shopkeeperRace = 'random';
+    // Migrate shops saved before shopkeeperRace was added (or saved with 'random')
+    if (!loadedConfig.shopkeeperRace || (loadedConfig.shopkeeperRace as string) === 'random') {
+      loadedConfig.shopkeeperRace = 'human';
     }
     setConfig(loadedConfig);
     setShopItems(shop.items);

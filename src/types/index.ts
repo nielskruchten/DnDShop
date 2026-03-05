@@ -60,7 +60,7 @@ export interface ShopConfig {
   itemTypes: string[];
   showPrices: boolean;
   priceMarkup: number;
-  shopkeeperRace: ShopkeeperRace | 'random';
+  shopkeeperRace: ShopkeeperRace;
 }
 
 export interface SavedShop {

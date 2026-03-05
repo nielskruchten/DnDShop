@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { ShopItem, ShopConfig, Shopkeeper, ShopkeeperRace } from '../types';
+import { SHOPKEEPER_RACES } from '../lib/npcGenerator';
 import ItemCard from './ItemCard';
 
-const RACE_OPTIONS: { id: ShopkeeperRace | 'random'; label: string }[] = [
-  { id: 'random', label: 'Any'   },
-  { id: 'human',  label: 'Human' },
-  { id: 'dwarf',  label: 'Dwarf' },
-  { id: 'elf',    label: 'Elf'   },
-];
+const RACE_LABELS: Record<ShopkeeperRace, string> = {
+  human: 'Human',
+  dwarf: 'Dwarf',
+  elf:   'Elf',
+};
 
 const FILTER_RARITIES = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary'];
+
+const RARITY_ORDER: Record<string, number> = {
+  Common: 0, Uncommon: 1, Rare: 2, 'Very Rare': 3, Legendary: 4,
+};
 
 const RARITY_PILL: Record<string, { label: string; active: string; inactive: string }> = {
   Common:      { label: 'C',  active: 'bg-zinc-600 text-zinc-100 border-zinc-500',         inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
@@ -19,6 +23,8 @@ const RARITY_PILL: Record<string, { label: string; active: string; inactive: str
   Legendary:   { label: 'L',  active: 'bg-orange-900/70 text-orange-300 border-orange-700/60', inactive: 'bg-transparent text-zinc-500 border-zinc-700' },
 };
 
+type SortField = 'name' | 'rarity' | 'type' | 'price';
+type SortDir   = 'asc' | 'desc';
 
 interface ShopDisplayProps {
   shopName: string;
@@ -33,7 +39,7 @@ interface ShopDisplayProps {
   onRegenerateAll: () => void;
   onViewDetail: (item: ShopItem) => void;
   onRerollShopkeeper: () => void;
-  onSelectRace: (race: ShopkeeperRace | 'random') => void;
+  onSelectRace: (race: ShopkeeperRace) => void;
 }
 
 export default function ShopDisplay({
@@ -55,6 +61,8 @@ export default function ShopDisplay({
   const [visibleRarities, setVisibleRarities] = useState<Set<string>>(
     new Set(FILTER_RARITIES),
   );
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDir, setSortDir]     = useState<SortDir>('asc');
 
   const allSelected = FILTER_RARITIES.every(r => visibleRarities.has(r));
 
@@ -72,6 +80,16 @@ export default function ShopDisplay({
     setVisibleRarities(new Set(FILTER_RARITIES));
   };
 
+  const handleSortClick = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  // Filter
   const filtered = items.filter(si => {
     const matchesSearch =
       search === '' || si.item.name.toLowerCase().includes(search.toLowerCase());
@@ -79,7 +97,45 @@ export default function ShopDisplay({
     return matchesSearch && matchesRarity;
   });
 
+  // Sort
+  const sorted = sortField
+    ? [...filtered].sort((a, b) => {
+        let cmp = 0;
+        if (sortField === 'name') {
+          cmp = a.item.name.localeCompare(b.item.name);
+        } else if (sortField === 'rarity') {
+          cmp = (RARITY_ORDER[a.item.rarity] ?? 99) - (RARITY_ORDER[b.item.rarity] ?? 99);
+        } else if (sortField === 'type') {
+          cmp = a.item.type.localeCompare(b.item.type);
+        } else if (sortField === 'price') {
+          cmp = (a.price ?? 0) - (b.price ?? 0);
+        }
+        return sortDir === 'asc' ? cmp : -cmp;
+      })
+    : filtered;
+
   const isFiltered = search !== '' || !allSelected;
+
+  const SortButton = ({ field, label }: { field: SortField; label: string }) => {
+    const active = sortField === field;
+    return (
+      <button
+        onClick={() => handleSortClick(field)}
+        className={`
+          flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors
+          ${active
+            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+            : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
+          }
+        `}
+      >
+        {label}
+        {active && (
+          <span className="text-[10px]">{sortDir === 'asc' ? '↑' : '↓'}</span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -126,25 +182,16 @@ export default function ShopDisplay({
             <span className="text-xs text-zinc-500 capitalize">{shopkeeper.gender}</span>
             <span className="text-zinc-700">·</span>
 
-            {/* Inline race selector */}
-            <div className="flex items-center gap-1">
-              {RACE_OPTIONS.map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => onSelectRace(opt.id)}
-                  title={`Set race to ${opt.label} and reroll name`}
-                  className={`
-                    px-1.5 py-0.5 rounded text-xs font-medium border transition-colors
-                    ${config.shopkeeperRace === opt.id
-                      ? 'border-gold-500/50 bg-gold-500/10 text-gold-400'
-                      : 'border-zinc-700 text-zinc-600 hover:border-zinc-600 hover:text-zinc-400'
-                    }
-                  `}
-                >
-                  {opt.label}
-                </button>
+            {/* Race dropdown */}
+            <select
+              value={config.shopkeeperRace}
+              onChange={e => onSelectRace(e.target.value as ShopkeeperRace)}
+              className="bg-zinc-800 border border-zinc-700 rounded text-xs text-zinc-300 px-1.5 py-0.5 focus:outline-none focus:border-zinc-500 hover:border-zinc-600 transition-colors cursor-pointer"
+            >
+              {SHOPKEEPER_RACES.map(race => (
+                <option key={race} value={race}>{RACE_LABELS[race]}</option>
               ))}
-            </div>
+            </select>
 
             <button
               onClick={onRerollShopkeeper}
@@ -210,15 +257,15 @@ export default function ShopDisplay({
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="no-print px-4 py-1.5 flex items-center gap-3 text-xs text-zinc-500 flex-shrink-0">
-        {isFiltered ? (
-          <span className="text-amber-400/70">
-            Showing {filtered.length} of {items.length}
-          </span>
-        ) : (
-          <span>{items.length} items</span>
-        )}
+      {/* Stats + Sort bar */}
+      <div className="no-print px-4 py-1.5 flex items-center gap-3 text-xs text-zinc-500 border-b border-zinc-800/40 flex-shrink-0">
+        {/* Item count */}
+        <span className="flex-shrink-0">
+          {isFiltered
+            ? <span className="text-amber-400/70">Showing {sorted.length} of {items.length}</span>
+            : <span>{items.length} items</span>
+          }
+        </span>
         <span>·</span>
         <span>{items.filter(i => i.locked).length} locked</span>
         {config.showPrices && (
@@ -227,6 +274,24 @@ export default function ShopDisplay({
             <span>{config.priceMarkup.toFixed(1)}× markup</span>
           </>
         )}
+
+        {/* Sort controls */}
+        <div className="ml-auto flex items-center gap-0.5">
+          <span className="text-zinc-600 mr-1">Sort:</span>
+          <SortButton field="name"   label="Name"   />
+          <SortButton field="rarity" label="Rarity" />
+          <SortButton field="type"   label="Type"   />
+          {config.showPrices && <SortButton field="price" label="Price" />}
+          {sortField && (
+            <button
+              onClick={() => { setSortField(null); setSortDir('asc'); }}
+              className="ml-1 text-zinc-600 hover:text-zinc-400 text-xs transition-colors"
+              title="Clear sort"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Item grid — scrollable */}
@@ -266,9 +331,9 @@ export default function ShopDisplay({
         </div>
 
         {/* Screen grid */}
-        {filtered.length > 0 ? (
+        {sorted.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 print:hidden">
-            {filtered.map((si, _) => {
+            {sorted.map(si => {
               const realIdx = items.indexOf(si);
               return (
                 <ItemCard
