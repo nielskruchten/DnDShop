@@ -15,11 +15,25 @@ const SOURCE_MAP = {
 };
 
 /**
- * Some source files concatenate the table header row onto the last sentence
- * of a paragraph with no newline, e.g.:
+ * Count the number of cells in a markdown table row (including empty ones).
+ * e.g. "| a | b | |" → 3
+ */
+function countCells(line) {
+  return line.split('|').slice(1, -1).length;
+}
+
+/**
+ * Normalises inline table formatting issues from the source files:
+ *
+ * Pattern 1 — text + table header on the same line (no newline between them):
  *   "...when 1 hour has passed. | d3 | Use fortune for |\n| --- | --- |\n..."
- * This function inserts a newline before such inline table headers so the table
- * header becomes its own line and can be parsed correctly.
+ *   → splits the text from the table header by inserting a newline.
+ *
+ * Pattern 2 — two table rows concatenated on the same line (end of table N
+ * immediately followed by the header of table N+1):
+ *   "| 6 | Gelatinous Cube | 2 | 10 (3d6) | | d6 | Ooze | CR | Blood Price |"
+ *   → splits at the boundary and inserts a blank line so each table is its own
+ *   paragraph block and parses independently.
  */
 function normalizeTableHeaders(text) {
   const lines = text.split('\n');
@@ -27,12 +41,13 @@ function normalizeTableHeaders(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const nextTrimmed = (lines[i + 1] ?? '').trim();
-    // Match: line doesn't start with |, ends with table-row content (| ... |),
-    // and the very next line is a markdown table separator (| --- | --- |).
+    const isSeparator = /^\|[\s:|-]+\|/.test(nextTrimmed);
+
+    // Pattern 1: non-table line with an inline table header appended at the end.
     if (
       !line.trimStart().startsWith('|') &&
       /\|[^|]*\|\s*$/.test(line) &&
-      /^\|[\s:|-]+\|/.test(nextTrimmed)
+      isSeparator
     ) {
       const match = line.match(/^(.*?)\s+(\|(?:[^|\n]+\|)+\s*)$/);
       if (match && match[1].trim()) {
@@ -41,6 +56,35 @@ function normalizeTableHeaders(text) {
         continue;
       }
     }
+
+    // Pattern 2: table line with two concatenated table rows (contains "| |").
+    // The next line must be a separator so we know where the new table starts.
+    if (
+      line.trimStart().startsWith('|') &&
+      line.slice(1, -1).includes('| |') &&
+      isSeparator
+    ) {
+      const sepCols = countCells(nextTrimmed);
+      // Try each "| |" occurrence as a candidate split point.
+      let pos = 1;
+      let found = false;
+      while (true) {
+        const idx = line.indexOf('| |', pos);
+        if (idx === -1) break;
+        const part1 = line.slice(0, idx + 1).trim();  // up to & including closing |
+        const part2 = line.slice(idx + 2).trim();      // from the opening | of next row
+        if (countCells(part2) === sepCols) {
+          out.push(part1);
+          out.push('');        // blank line → two separate table blocks
+          out.push(part2);
+          found = true;
+          break;
+        }
+        pos = idx + 1;
+      }
+      if (found) continue;
+    }
+
     out.push(line);
   }
   return out.join('\n');
