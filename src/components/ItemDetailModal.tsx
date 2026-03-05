@@ -16,6 +16,7 @@ const RARITY_STYLES: Record<string, { badge: string; heading: string; border: st
 
 type ParsedBlock =
   | { type: 'paragraph'; text: string }
+  | { type: 'heading'; level: number; text: string }
   | { type: 'table-caption'; text: string }
   | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'list'; items: string[] };
@@ -29,14 +30,51 @@ function parseTableRow(line: string): string[] {
   return line.split('|').slice(1, -1).map(c => c.trim());
 }
 
+/**
+ * Within a single \n\n-separated block, further split on transitions
+ * between pipe-table lines and non-pipe lines.
+ * e.g. "Table: Foo\n| a | b |\n|---|---|\n| 1 | 2 |"
+ * becomes ["Table: Foo", "| a | b |\n|---|---|\n| 1 | 2 |"]
+ */
+function splitMixedBlock(blockText: string): string[] {
+  const lines = blockText.split('\n').filter(l => l.trim());
+  if (lines.length <= 1) return [blockText];
+
+  const result: string[] = [];
+  let group: string[] = [];
+  let groupIsTable: boolean | null = null;
+
+  for (const line of lines) {
+    const isTableLine = line.trim().startsWith('|');
+    if (groupIsTable === null) {
+      groupIsTable = isTableLine;
+      group.push(line);
+    } else if (isTableLine === groupIsTable) {
+      group.push(line);
+    } else {
+      result.push(group.join('\n'));
+      group = [line];
+      groupIsTable = isTableLine;
+    }
+  }
+  if (group.length > 0) result.push(group.join('\n'));
+  return result;
+}
+
 function parseDescription(description: string): ParsedBlock[] {
-  const rawBlocks = description.split('\n\n').filter(b => b.trim());
+  // Split on blank lines, then further split mixed blocks (label+table, no blank line between)
+  const atomicBlocks: string[] = [];
+  for (const block of description.split('\n\n').filter(b => b.trim())) {
+    atomicBlocks.push(...splitMixedBlock(block));
+  }
+
   const blocks: ParsedBlock[] = [];
 
-  for (const block of rawBlocks) {
+  for (const block of atomicBlocks) {
     const lines = block.split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length === 0) continue;
 
-    // Table: all lines start with |
+    // ── Table: all lines start with | ──────────────────────────────────────
     if (lines.every(l => l.startsWith('|'))) {
       const dataRows = lines.filter(l => !isSeparatorRow(l)).map(parseTableRow);
       if (dataRows.length >= 1) {
@@ -45,11 +83,35 @@ function parseDescription(description: string): ParsedBlock[] {
       continue;
     }
 
-    // Table caption: single line with "(table)" or "Table:" prefix
+    // ── Single-line block ───────────────────────────────────────────────────
     if (lines.length === 1) {
-      const line = lines[0];
-      if (/\(table\)/i.test(line) || /^Table:/i.test(line)) {
-        const text = line
+      const rawLine = lines[0];
+
+      // Markdown heading: ## / ### etc.
+      const headingMatch = rawLine.match(/^(#{1,4})\s+(.+)/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const inner = headingMatch[2].replace(/\*\*/g, '').trim();
+        // If it also looks like a table label, treat as table-caption
+        if (/\(table\)/i.test(inner) || /^Table:/i.test(inner)) {
+          blocks.push({
+            type: 'table-caption',
+            text: inner.replace(/\s*\(table\)\s*/i, '').replace(/^Table:\s*/i, '').trim(),
+          });
+        } else {
+          blocks.push({ type: 'heading', level, text: inner });
+        }
+        continue;
+      }
+
+      // Table caption: (table), "Table: …", or __**…**__ wrapper
+      const stripped = rawLine.replace(/^__\*\*/, '').replace(/\*\*__$/, '').trim();
+      if (
+        /\(table\)/i.test(rawLine) ||
+        /^Table:/i.test(rawLine) ||
+        /^Table:/i.test(stripped)
+      ) {
+        const text = stripped
           .replace(/\*\*/g, '')
           .replace(/\s*\(table\)\s*/i, '')
           .replace(/^Table:\s*/i, '')
@@ -59,14 +121,13 @@ function parseDescription(description: string): ParsedBlock[] {
       }
     }
 
-    // Bullet list: all non-empty lines start with - or *
-    if (lines.length > 0 && lines.every(l => l.startsWith('- ') || l.startsWith('* '))) {
-      const items = lines.map(l => l.replace(/^[-*]\s+/, ''));
-      blocks.push({ type: 'list', items });
+    // ── Bullet list ─────────────────────────────────────────────────────────
+    if (lines.every(l => l.startsWith('- ') || l.startsWith('* '))) {
+      blocks.push({ type: 'list', items: lines.map(l => l.replace(/^[-*]\s+/, '')) });
       continue;
     }
 
-    // Default: paragraph
+    // ── Default: paragraph ──────────────────────────────────────────────────
     blocks.push({ type: 'paragraph', text: block });
   }
 
@@ -105,6 +166,13 @@ function BlockParagraph({ text }: { text: string }) {
       <InlineText text={text} />
     </p>
   );
+}
+
+function BlockHeading({ level, text }: { level: number; text: string }) {
+  const cls = level <= 2
+    ? 'text-sm font-semibold text-zinc-200 mt-1'
+    : 'text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1';
+  return <p className={cls}><InlineText text={text} /></p>;
 }
 
 function BlockTableCaption({ text }: { text: string }) {
@@ -166,6 +234,7 @@ function BlockTable({ headers, rows }: { headers: string[]; rows: string[][] }) 
 function renderBlock(block: ParsedBlock, i: number) {
   switch (block.type) {
     case 'paragraph':     return <BlockParagraph     key={i} text={block.text} />;
+    case 'heading':       return <BlockHeading       key={i} level={block.level} text={block.text} />;
     case 'table-caption': return <BlockTableCaption  key={i} text={block.text} />;
     case 'list':          return <BlockList          key={i} items={block.items} />;
     case 'table':         return <BlockTable         key={i} headers={block.headers} rows={block.rows} />;
