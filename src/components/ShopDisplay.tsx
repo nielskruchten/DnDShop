@@ -174,10 +174,11 @@ export default function ShopDisplay({
           </div>
         </div>
 
-        {/* Row 2: shopkeeper — all inline, name truncates, controls stay adjacent */}
+        {/* Row 2: shopkeeper — name is fixed-width so controls never shift */}
         {shopkeeper && (
-          <div className="flex items-center gap-x-2 mt-0.5 min-w-0">
-            <span className="text-sm text-zinc-300 font-medium truncate min-w-0 shrink">
+          <div className="flex items-center gap-x-2 mt-0.5">
+            {/* Fixed-width name box: controls always start at the same x-position */}
+            <span className="text-sm text-zinc-300 font-medium w-40 flex-shrink-0 truncate">
               {shopkeeper.name}
             </span>
             <span className="text-zinc-700 flex-shrink-0">·</span>
